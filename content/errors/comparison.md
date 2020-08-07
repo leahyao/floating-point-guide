@@ -69,3 +69,36 @@ There is an alternative to heaping conceptual complexity onto such an apparently
 This is conceptually very clear and easy and has the advantage of implicitly scaling the relative error margin with the magnitude of the values. Technically, it's a bit more complex, but not as much as you might think, because IEEE 754 floats are designed to maintain their order when their bit patterns are interpreted as integers.
 
 However, this method does require the programming language to support conversion between floating-point values and integer bit patterns. Read the [Comparing floating-point numbers](/references/) paper for more details.
+
+
+
+| 标题 | 描述                       |
+| ---- | -------------------------- |
+| 比较 | 解释浮点数比较中的不同陷阱 |
+
+舍入错误，使得大部分浮点数结果有微小误差。只要误差足够小，通常都可以忽略。然而，这也意味着两个理论上相等的数（例如：当用不同的正确方法计算相同的结果时）比较结果可能不相等。例如：
+
+		float a = 0.15 + 0.15
+		float b = 0.1 + 0.2
+		if(a == b) // can be false!
+		if(a >= b) // can also be false!
+
+不要使用绝对误差
+--------------------------------
+
+解决方法是，不要去判断两个数是否完全相等，而是去判断两个数是否相差足够小。与之比较的误差范围通常称为_浮点可表示的最小值_.
+
+		if( Math.abs(a-b) < 0.00001) // wrong - don't do this
+
+这不是一个好方法，因为一个选定浮点可以表示的最小值只是“看起来小”，但是对于两个也特别小的数进行比较，这个浮点可表示的最小值就相对来说太大了。这样两个完全不等的数比较会得到一个“相等”的结果。当比较数特别大的时候，浮点可表示的最小值可能比舍入最小误差还要小，比较往往会得到“不相等”的结果。因此，有必要判断_相关误差_是否小于浮点可表示的最小值:
+
+		if( Math.abs((a-b)/b) < 0.00001 ) // still not right!
+
+注意边界情况
+-----------------------
+
+有一些重要的特殊情况可能会出错：
+
+* 当 `a` 和 `b`  都是0。 `0.0/0.0` 是个”非数“， 这种情况在一些平台上会产生异常，或者所有的比较返回错误。
+  * 当只有`b`是0，除法会产生“无穷，这可能会产生异常，或者即使`a`更小结果也会比浮点可表示的最小值小。
+* 当`a` 和 `b`是符号相反的极小数时，也可能会返回“错误‘，尽管它们可能是是最小的非0数。
